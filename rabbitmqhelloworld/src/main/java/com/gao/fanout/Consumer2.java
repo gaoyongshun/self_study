@@ -1,4 +1,4 @@
-package com.gao.helloworld;
+package com.gao.fanout;
 
 import com.gao.util.RabbitMqUtil;
 import com.rabbitmq.client.*;
@@ -6,22 +6,25 @@ import com.rabbitmq.client.*;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
-public class Consumer {
+public class Consumer2 {
 
     public static void main(String[] args) throws IOException, TimeoutException {
 
        Connection connection = RabbitMqUtil.getConnection();
 
-        Channel channel = connection.createChannel();
+        final Channel channel = connection.createChannel();
+        //绑定交换机
+        channel.exchangeDeclare(Producer.EXCHANGE_NAME,Producer.TYPE);
+        String queueName = channel.queueDeclare().getQueue();
 
-        channel.queueDeclare(Producer.QUEUE_NAME, false, false, false, null);
-        channel.basicConsume(Producer.QUEUE_NAME, true, new DefaultConsumer(channel) {
+        channel.queueBind(queueName,Producer.EXCHANGE_NAME,"");
+
+        channel.basicConsume(queueName,false,new DefaultConsumer(channel){
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                System.out.println("==========="+new String(body));
+                System.out.println("fanout Msg : "+ new String(body));
             }
         });
-//        channel.close();
-//        connection.close();
+
     }
 }
